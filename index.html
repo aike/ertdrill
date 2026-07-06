@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>行基本変形ドリル</title>
+<style>
+:root{
+  --bg:#f2f4f9; --card:#ffffff; --ink:#1a2233; --sub:#67708a;
+  --acc:#3b5bdb; --acc-ink:#ffffff; --acc-soft:#e8edff;
+  --ok:#0a8f4d; --ok-soft:#e3f6ec; --warn:#c92a2a; --warn-soft:#ffe9e9;
+  --line:#dbe0ec; --sel-a:#d6e4ff; --sel-b:#ffe8cc;
+  --key:#f6f7fb; --key-ink:#1a2233; --shadow:0 1px 3px rgba(20,30,60,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#12141a; --card:#1c2029; --ink:#e8eaf0; --sub:#98a0b3;
+    --acc:#7c95f5; --acc-ink:#0e1220; --acc-soft:#252e4a;
+    --ok:#4cc38a; --ok-soft:#173428; --warn:#ff8787; --warn-soft:#3a2020;
+    --line:#333a48; --sel-a:#243a5e; --sel-b:#54381c;
+    --key:#262b36; --key-ink:#e8eaf0; --shadow:0 1px 3px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Segoe UI","Hiragino Sans","Yu Gothic UI",system-ui,sans-serif;
+  -webkit-user-select:none; user-select:none;
+}
+header{
+  display:flex; align-items:center; gap:16px;
+  max-width:1100px; margin:0 auto; padding:14px 16px 4px;
+}
+header h1{font-size:1.15rem; letter-spacing:.02em;}
+header .hstat{margin-left:auto; display:flex; gap:14px; font-size:.9rem; color:var(--sub);}
+header .hstat b{color:var(--ink); font-variant-numeric:tabular-nums;}
+#timer{min-width:4.5em; text-align:right;}
+
+main{
+  display:flex; gap:16px; align-items:flex-start;
+  max-width:1100px; margin:0 auto; padding:10px 16px 40px;
+}
+#colL{flex:1 1 620px; min-width:0; display:flex; flex-direction:column; gap:14px;}
+#colR{flex:0 0 320px; display:flex; flex-direction:column; gap:14px;}
+.card{background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); padding:16px;}
+
+/* ---- 問題 ---- */
+#badge{
+  display:inline-block; font-size:.8rem; font-weight:600; letter-spacing:.05em;
+  padding:3px 10px; border-radius:99px; background:var(--acc-soft); color:var(--acc);
+  margin-bottom:8px;
+}
+#instr{font-size:.95rem; line-height:1.6;}
+#eqs{margin-top:8px; font-size:1.05rem; font-style:italic; line-height:1.7; color:var(--ink);}
+
+/* ---- 行列 ---- */
+#mxwrap{display:flex; justify-content:center; padding:22px 8px; overflow-x:auto;}
+.mx{display:flex; align-items:stretch; gap:0; --rowh:3.75rem;}
+.rl-col{display:flex; flex-direction:column; margin-right:10px; padding:4px 0;}
+.brk{width:10px; border:2.5px solid var(--ink); align-self:stretch;}
+.brk.l{border-right:none; border-radius:6px 0 0 6px;}
+.brk.r{border-left:none; border-radius:0 6px 6px 0;}
+.mrows{display:flex; flex-direction:column; padding:4px 2px;}
+.mrow{display:flex; align-items:center; border-radius:8px; transition:background .12s;}
+.mrow .cell{
+  min-width:3.4em; height:var(--rowh); display:flex; align-items:center; justify-content:center;
+  font-size:1.25rem; font-variant-numeric:tabular-nums; padding:2px 6px;
+}
+.mrow .cell.cut{border-right:2px solid var(--ink); }
+.rl{
+  height:var(--rowh); min-width:2.6em; display:flex; align-items:center; justify-content:center;
+  font-size:.95rem; font-weight:600; color:var(--sub); border-radius:8px;
+}
+.pickable .mrow, .pickable .rl{cursor:pointer;}
+.pickable .mrow:hover{background:color-mix(in srgb, var(--acc-soft) 55%, transparent);}
+.mrow.selA{background:var(--sel-a) !important; outline:2px solid var(--acc); outline-offset:-2px;}
+.mrow.selB{background:var(--sel-b) !important; outline:2px dashed var(--acc); outline-offset:-2px;}
+.fr{display:inline-flex; flex-direction:column; align-items:center; line-height:1.1; font-size:.85em; vertical-align:middle;}
+.fr>span:first-child{border-bottom:1.5px solid currentColor; padding:0 3px;}
+.fr>span:last-child{padding:0 3px;}
+
+/* 小さな解答表示用 */
+.mx.small{--rowh:2.6rem;}
+.mx.small .mrow .cell{min-width:2.7em; font-size:1.02rem;}
+.mx.small .brk{border-width:2px;}
+.mx.small{pointer-events:none;}
+
+/* ---- 結果パネル ---- */
+#result{display:none;}
+#result.show{display:block;}
+#result.ok{border-color:var(--ok); background:var(--ok-soft);}
+#result.giveup{border-color:var(--warn);}
+#result h2{font-size:1.15rem; margin-bottom:6px;}
+#result .rstats{display:flex; gap:18px; font-size:.95rem; margin:6px 0 4px; flex-wrap:wrap;}
+#result .rstats b{font-variant-numeric:tabular-nums;}
+#result .best{color:var(--ok); font-weight:700;}
+#result .sol{font-size:1.1rem; font-style:italic; margin-top:6px;}
+#nextbtn{
+  margin-top:12px; width:100%; padding:14px; font-size:1.1rem; font-weight:700;
+  background:var(--acc); color:var(--acc-ink); border:none; border-radius:10px; cursor:pointer;
+}
+#nextbtn:hover{filter:brightness(1.08);}
+
+/* ---- 履歴 ---- */
+#histcard h3{font-size:.85rem; color:var(--sub); margin-bottom:6px; font-weight:600;}
+#histlist{list-style:none; max-height:130px; overflow-y:auto; font-size:.95rem; line-height:1.7; font-variant-numeric:tabular-nums;}
+#histlist li{border-bottom:1px dashed var(--line); padding:1px 4px;}
+#histlist li:last-child{border-bottom:none; color:var(--acc); font-weight:600;}
+#histlist .empty{color:var(--sub); border:none;}
+
+/* ---- 操作パネル ---- */
+.opbtn{
+  display:block; width:100%; padding:12px 14px; margin-bottom:8px;
+  font-size:1rem; font-weight:600; text-align:left;
+  background:var(--key); color:var(--key-ink);
+  border:2px solid var(--line); border-radius:10px; cursor:pointer;
+}
+.opbtn small{display:block; font-weight:400; font-size:.78rem; color:var(--sub); margin-top:2px;}
+.opbtn:hover{border-color:var(--acc);}
+.opbtn.active{background:var(--acc); color:var(--acc-ink); border-color:var(--acc);}
+.opbtn.active small{color:var(--acc-ink); opacity:.8;}
+.opbtn:disabled{opacity:.45; cursor:default;}
+#prompt{
+  min-height:2.4em; display:flex; align-items:center; justify-content:center; text-align:center;
+  font-size:.92rem; color:var(--sub); padding:4px 6px;
+}
+#prompt.flash{color:var(--warn); font-weight:700;}
+#preview{
+  text-align:center; font-size:1.15rem; min-height:1.6em; font-variant-numeric:tabular-nums;
+  color:var(--ink); font-weight:600;
+}
+
+/* ---- テンキー ---- */
+#entrydisp{
+  height:2.4em; display:flex; align-items:center; justify-content:flex-end;
+  font-size:1.4rem; font-variant-numeric:tabular-nums; padding:0 12px; margin-bottom:8px;
+  background:var(--bg); border:1px solid var(--line); border-radius:8px;
+}
+#keypad{display:grid; grid-template-columns:repeat(4,1fr); gap:6px;}
+#keypad button{
+  padding:13px 0; font-size:1.15rem; font-weight:600;
+  background:var(--key); color:var(--key-ink);
+  border:1px solid var(--line); border-radius:9px; cursor:pointer;
+}
+#keypad button:hover{border-color:var(--acc);}
+#keypad button:active{transform:translateY(1px);}
+#keypad button.kok{grid-column:span 2; background:var(--acc); color:var(--acc-ink); border-color:var(--acc);}
+#keypad.off{opacity:.35; pointer-events:none;}
+
+/* ---- コントロール ---- */
+#controls{display:flex; gap:8px;}
+#controls button{
+  flex:1; padding:10px 4px; font-size:.9rem; font-weight:600;
+  background:var(--key); color:var(--key-ink);
+  border:1px solid var(--line); border-radius:9px; cursor:pointer;
+}
+#controls button:hover{border-color:var(--acc);}
+#controls button:disabled{opacity:.4; cursor:default;}
+#controls #giveup{color:var(--warn);}
+
+footer{max-width:1100px; margin:0 auto; padding:0 16px 24px; font-size:.8rem; color:var(--sub); line-height:1.6;}
+footer .about{display:block; margin-top:6px; text-align:right;}
+footer .about a{color:var(--sub); text-decoration:none;}
+footer .about a:hover{color:var(--acc); text-decoration:underline;}
+
+@media (max-width:820px){
+  main{flex-direction:column;}
+  #colR{flex:1 1 auto; width:100%;}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>行基本変形ドリル</h1>
+  <div class="hstat">
+    <span>今回 <b id="scount">0</b> 問</span>
+    <span>連続 <b id="sstreak">0</b></span>
+    <span>累計 <b id="stotal">0</b></span>
+    <b id="timer">0.0秒</b>
+  </div>
+</header>
+<main>
+  <section id="colL">
+    <div class="card" id="probcard">
+      <span id="badge"></span>
+      <div id="instr"></div>
+      <div id="eqs"></div>
+      <div id="mxwrap"></div>
+    </div>
+    <div class="card" id="result"></div>
+    <div class="card" id="histcard">
+      <h3>操作履歴 <span id="opcount"></span></h3>
+      <ul id="histlist"></ul>
+    </div>
+  </section>
+  <aside id="colR">
+    <div class="card">
+      <button class="opbtn" id="op-swap">R<sub>i</sub> ↔ R<sub>j</sub>　行の入れ替え<small>2つの行を交換する</small></button>
+      <button class="opbtn" id="op-scale">R<sub>i</sub> × c　行の定数倍<small>行を 0 でない定数倍する</small></button>
+      <button class="opbtn" id="op-add">R<sub>i</sub> + c·R<sub>j</sub>　行の加算<small>ある行に別の行の定数倍を加える</small></button>
+      <div id="prompt"></div>
+      <div id="preview"></div>
+    </div>
+    <div class="card">
+      <div id="entrydisp"></div>
+      <div id="keypad">
+        <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="bs">⌫</button>
+        <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="C">C</button>
+        <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="pm">±</button>
+        <button data-k="0">0</button><button data-k="/">⁄</button><button data-k="ok" class="kok">決定</button>
+      </div>
+    </div>
+    <div class="card">
+      <div id="controls">
+        <button id="undo">↩ 元に戻す</button>
+        <button id="reset">最初から</button>
+        <button id="giveup">ギブアップ</button>
+      </div>
+    </div>
+  </aside>
+</main>
+<footer>
+  行基本変形は3種類：行の入れ替え・行の 0 でない定数倍・ある行への別の行の定数倍の加算。
+  操作ボタン → 行をクリック（→ 必要なら係数をテンキーで入力して「決定」）の順で操作します。分数は「⁄」キーで入力できます。
+  <span class="about"><a href="https://github.com/aike/ertdrill" target="_blank" rel="noopener">About</a></span>
+</footer>
+
+<script>
+'use strict';
+/* ================================================================
+   数学ロジック（DOM 非依存）
+   ================================================================ */
+function gcd(a, b){
+  a = Math.abs(a); b = Math.abs(b);
+  while (b){ const t = a % b; a = b; b = t; }
+  return a === 0 ? 1 : a;
+}
+function F(n, d){
+  if (d === undefined) d = 1;
+  if (d === 0) throw new Error('denominator 0');
+  if (d < 0){ n = -n; d = -d; }
+  const g = gcd(n, d);
+  return { n: n / g, d: d / g };
+}
+const fAdd  = (a, b) => F(a.n * b.d + b.n * a.d, a.d * b.d);
+const fMul  = (a, b) => F(a.n * b.n, a.d * b.d);
+const fNeg  = a => F(-a.n, a.d);
+const fInv  = a => F(a.d, a.n);
+const fZero = a => a.n === 0;
+const fOne  = a => a.n === 1 && a.d === 1;
+const fEq   = (a, b) => a.n === b.n && a.d === b.d;
+const fStr  = a => a.d === 1 ? String(a.n) : a.n + '/' + a.d;
+const toF    = M => M.map(r => r.map(v => F(v)));
+const cloneM = M => M.map(r => r.slice());
+
+function opSwap(M, i, j){ const t = M[i]; M[i] = M[j]; M[j] = t; }
+function opScale(M, i, c){ M[i] = M[i].map(v => fMul(v, c)); }
+function opAddRow(M, i, j, c){ M[i] = M[i].map((v, k) => fAdd(v, fMul(c, M[j][k]))); }
+
+function pivotCol(row){
+  for (let c = 0; c < row.length; c++) if (!fZero(row[c])) return c;
+  return -1;
+}
+/* 行階段形：零行は下に集まり、各行の先頭成分の列番号が真に増加（先頭は 1 でなくてよい） */
+function isREF(M){
+  let last = -1, seenZero = false;
+  for (const row of M){
+    const p = pivotCol(row);
+    if (p < 0){ seenZero = true; continue; }
+    if (seenZero || p <= last) return false;
+    last = p;
+  }
+  return true;
+}
+/* 行簡約階段形：REF かつ 各ピボットが 1 で、ピボット列の他成分がすべて 0 */
+function isRREF(M){
+  if (!isREF(M)) return false;
+  for (let r = 0; r < M.length; r++){
+    const p = pivotCol(M[r]);
+    if (p < 0) continue;
+    if (!fOne(M[r][p])) return false;
+    for (let q = 0; q < M.length; q++)
+      if (q !== r && !fZero(M[q][p])) return false;
+  }
+  return true;
+}
+function leftIsIdentity(M, n){
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c < n; c++){
+      const v = M[r][c];
+      if (r === c ? !fOne(v) : !fZero(v)) return false;
+    }
+  return true;
+}
+function rref(M0){
+  const M = cloneM(M0);
+  const rows = M.length, cols = M[0].length;
+  let r = 0;
+  for (let lead = 0; lead < cols && r < rows; lead++){
+    let i = r;
+    while (i < rows && fZero(M[i][lead])) i++;
+    if (i === rows) continue;
+    opSwap(M, i, r);
+    opScale(M, r, fInv(M[r][lead]));
+    for (let q = 0; q < rows; q++)
+      if (q !== r && !fZero(M[q][lead])) opAddRow(M, q, r, fNeg(M[q][lead]));
+    r++;
+  }
+  return M;
+}
+
+/* ---------------- 問題生成 ---------------- */
+const ri   = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+function identity(n){
+  return Array.from({ length: n }, (_, i) =>
+    Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)));
+}
+/* 整数行列に基本変形をランダム適用（成分の絶対値を maxAbs 以下に保つ） */
+function messUp(M0, nOps, maxAbs){
+  const M = M0.map(r => r.slice());
+  const m = M.length;
+  let done = 0, guard = 0;
+  while (done < nOps && guard < 300){
+    guard++;
+    const i = ri(0, m - 1), j = ri(0, m - 1);
+    if (i === j) continue;
+    if (m > 1 && Math.random() < 0.3){
+      const t = M[i]; M[i] = M[j]; M[j] = t; done++;
+    } else {
+      const c = pick([-2, -1, 1, 2]);
+      const nr = M[i].map((v, k) => v + c * M[j][k]);
+      if (Math.max(...nr.map(Math.abs)) <= maxAbs){ M[i] = nr; done++; }
+    }
+  }
+  return M;
+}
+const isIntIdentity = A => A.every((r, i) => r.every((v, j) => v === (i === j ? 1 : 0)));
+
+/* 階段形の骨組み（整数行列）を作る */
+function refSkeleton(rows, cols, rank, pivotVals){
+  const combos3 = [[0,1,2],[0,1,2],[0,1,3],[0,2,3]];
+  const combos2 = [[0,1],[0,2],[0,3],[1,2],[1,3]];
+  const pc = rank === 3 ? pick(combos3) : pick(combos2);
+  const E = Array.from({ length: rows }, () => Array(cols).fill(0));
+  for (let r = 0; r < rank; r++){
+    E[r][pc[r]] = pick(pivotVals);
+    for (let c = pc[r] + 1; c < cols; c++) E[r][c] = ri(-4, 4);
+  }
+  return E;
+}
+
+/* 1) 行階段形にする */
+function genType1(){
+  for (let t = 0; t < 500; t++){
+    const rank = Math.random() < 0.75 ? 3 : 2;
+    const E = refSkeleton(3, 4, rank, [1, 1, 2, -1, -2, 3]);
+    const M = messUp(E, ri(3, 5), 9);
+    const Mf = toF(M);
+    if (isREF(Mf)) continue;
+    return { type: 1, M: Mf, augCol: null, answer: rref(Mf) };
+  }
+  throw new Error('genType1 failed');
+}
+/* 2) 階段形を簡約化して RREF にする */
+function genType2(){
+  for (let t = 0; t < 500; t++){
+    const rank = Math.random() < 0.7 ? 3 : 2;
+    const E = refSkeleton(3, 4, rank, [2, -1, -2, 3, 1]);
+    const Mf = toF(E);
+    if (!isREF(Mf) || isRREF(Mf)) continue;
+    return { type: 2, M: Mf, augCol: null, answer: rref(Mf) };
+  }
+  throw new Error('genType2 failed');
+}
+/* 3) 拡大係数行列で連立一次方程式を解く（解は一意・整数） */
+function genType3(){
+  for (let t = 0; t < 500; t++){
+    const n = Math.random() < 0.6 ? 3 : 2;
+    const A = messUp(identity(n), n === 2 ? ri(2, 3) : ri(3, 5), 7);
+    if (isIntIdentity(A)) continue;
+    const x = Array.from({ length: n }, () => ri(-4, 4));
+    if (x.every(v => v === 0)) continue;
+    const b = A.map(row => row.reduce((s, v, k) => s + v * x[k], 0));
+    if (Math.max(...b.map(Math.abs)) > 12) continue;
+    const aug = A.map((row, i) => row.concat([b[i]]));
+    const Mf = toF(aug);
+    if (isRREF(Mf)) continue;
+    return { type: 3, M: Mf, augCol: n, n, answer: rref(Mf), sol: x, A };
+  }
+  throw new Error('genType3 failed');
+}
+/* 4) [A|I] を変形して逆行列を求める（det ±1 なので逆行列も整数） */
+function genType4(){
+  for (let t = 0; t < 500; t++){
+    const n = Math.random() < 0.55 ? 3 : 2;
+    const A = messUp(identity(n), n === 2 ? ri(2, 3) : ri(3, 5), 6);
+    if (isIntIdentity(A)) continue;
+    const I = identity(n);
+    const aug = A.map((row, i) => row.concat(I[i]));
+    const Mf = toF(aug);
+    const ans = rref(Mf);
+    const inv = ans.map(r => r.slice(n));
+    if (inv.some(r => r.some(v => v.d !== 1 || Math.abs(v.n) > 9))) continue;
+    return { type: 4, M: Mf, augCol: n, n, answer: ans, inv, A };
+  }
+  throw new Error('genType4 failed');
+}
+const GENS = { 1: genType1, 2: genType2, 3: genType3, 4: genType4 };
+
+function checkSolved(P){
+  if (P.type === 1) return isREF(P.M);
+  if (P.type === 2) return isRREF(P.M);
+  if (P.type === 3) return isRREF(P.M);
+  return leftIsIdentity(P.M, P.n);
+}
+
+if (typeof module !== 'undefined' && module.exports){
+  module.exports = {
+    F, fAdd, fMul, fNeg, fInv, fZero, fOne, fEq, fStr, toF, cloneM,
+    opSwap, opScale, opAddRow, pivotCol, isREF, isRREF, leftIsIdentity, rref,
+    identity, messUp, genType1, genType2, genType3, genType4, checkSolved
+  };
+}
+
+/* ================================================================
+   UI
+   ================================================================ */
+if (typeof document !== 'undefined'){ (function(){
+
+const $ = id => document.getElementById(id);
+
+const TYPE_INFO = {
+  1: { badge: '① 行階段形', instr:
+      '行基本変形を使って、この行列を<b>行階段形（階段行列）</b>にせよ。' +
+      '各行の先頭の非零成分（ピボット）が階段状に並べばよく、先頭成分は 1 でなくてもよい。' },
+  2: { badge: '② 簡約化', instr:
+      'この行列はすでに行階段形である。さらに簡約化して<b>行簡約階段形</b>にせよ。' +
+      '各ピボットを 1 にし、ピボットの上の成分もすべて 0 にする。' },
+  3: { badge: '③ 連立方程式', instr:
+      '次の連立一次方程式の拡大係数行列を行基本変形し、<b>左側を単位行列</b>にして解を求めよ。' },
+  4: { badge: '④ 逆行列', instr:
+      '拡大係数行列 [A | I] を行基本変形し、<b>左側を単位行列</b>にして A の逆行列を求めよ。' +
+      '完成すると右側が A⁻¹ になる。' },
+};
+const VARS = ['x', 'y', 'z'];
+const MINUS = '−';
+
+/* ---- 状態 ---- */
+let P = null;            // 現在の問題
+let hist = [];           // undo 用スナップショット
+let log = [];            // 操作履歴（表示文字列）
+let mode = null;         // 'swap' | 'scale' | 'add' | null
+let picks = [];          // 選択済み行
+let entry = { sign: 1, num: '', den: null };
+let solved = false, gaveUp = false;
+let t0 = 0, timerId = null;
+let bag = [];
+let session = 0, streak = 0;
+
+let store = { total: 0, best: {} };
+try {
+  const s = localStorage.getItem('ertdrill');
+  if (s) store = Object.assign(store, JSON.parse(s));
+} catch (e) {}
+function saveStore(){ try { localStorage.setItem('ertdrill', JSON.stringify(store)); } catch (e) {} }
+
+/* ---- 表示ヘルパ ---- */
+function numHTML(f){
+  const sign = f.n < 0 ? MINUS : '';
+  const a = Math.abs(f.n);
+  if (f.d === 1) return sign + a;
+  return sign + '<span class="fr"><span>' + a + '</span><span>' + f.d + '</span></span>';
+}
+function fDisp(f){ return (f.n < 0 ? MINUS : '') + Math.abs(f.n) + (f.d === 1 ? '' : '/' + f.d); }
+function coefTerm(c, v, first){
+  // 係数 c(整数) と変数名 v から "2x" "− y" などの項を作る
+  if (c === 0) return '';
+  const a = Math.abs(c);
+  const body = (a === 1 ? '' : a) + v;
+  if (first) return (c < 0 ? MINUS : '') + body;
+  return (c < 0 ? ' ' + MINUS + ' ' : ' + ') + body;
+}
+function eqsHTML(A, b){
+  return A.map((row, i) => {
+    let s = '', first = true;
+    row.forEach((c, k) => {
+      const t = coefTerm(c, VARS[k], first);
+      if (t){ s += t; first = false; }
+    });
+    if (s === '') s = '0';
+    return s + ' = ' + (b[i] < 0 ? MINUS + Math.abs(b[i]) : b[i]);
+  }).join('<br>');
+}
+function matrixHTML(M, augCol, small, clickable){
+  let h = '<div class="mx' + (small ? ' small' : '') + '">';
+  if (clickable){
+    h += '<div class="rl-col">' + M.map((_, r) =>
+      '<div class="rl" data-r="' + r + '">R' + (r + 1) + '</div>').join('') + '</div>';
+  }
+  h += '<div class="brk l"></div><div class="mrows">';
+  M.forEach((row, r) => {
+    h += '<div class="mrow" data-r="' + r + '">';
+    row.forEach((v, c) => {
+      const cut = (augCol !== null && augCol !== undefined && c === augCol - 1) ? ' cut' : '';
+      h += '<div class="cell' + cut + '">' + numHTML(v) + '</div>';
+    });
+    h += '</div>';
+  });
+  h += '</div><div class="brk r"></div></div>';
+  return h;
+}
+
+/* ---- テンキー ---- */
+function resetEntry(){ entry = { sign: 1, num: '', den: null }; }
+function needScalar(){
+  return !solved && !gaveUp &&
+    ((mode === 'scale' && picks.length === 1) || (mode === 'add' && picks.length === 2));
+}
+function entryStr(){
+  let s = entry.sign < 0 ? MINUS : '';
+  s += entry.num === '' ? '□' : entry.num;
+  if (entry.den !== null) s += '/' + (entry.den === '' ? '□' : entry.den);
+  return s;
+}
+function entryValue(){
+  if (entry.num === '') return null;
+  const n = parseInt(entry.num, 10);
+  let d = 1;
+  if (entry.den !== null){
+    if (entry.den === '') return null;
+    d = parseInt(entry.den, 10);
+    if (d === 0) return null;
+  }
+  return F(entry.sign * n, d);
+}
+function keyPress(k){
+  if (!needScalar()){ flash('先に操作の種類と行を選んでください'); return; }
+  if (k >= '0' && k <= '9'){
+    if (entry.den === null){ if (entry.num.length < 3) entry.num += k; }
+    else { if (entry.den.length < 3) entry.den += k; }
+  } else if (k === '/'){
+    if (entry.num !== '' && entry.den === null) entry.den = '';
+  } else if (k === 'pm'){
+    entry.sign *= -1;
+  } else if (k === 'bs'){
+    if (entry.den !== null){
+      if (entry.den !== '') entry.den = entry.den.slice(0, -1);
+      else entry.den = null;
+    } else entry.num = entry.num.slice(0, -1);
+  } else if (k === 'C'){
+    resetEntry();
+  } else if (k === 'ok'){
+    confirmScalar(); return;
+  }
+  render();
+}
+function confirmScalar(){
+  const c = entryValue();
+  if (c === null){ flash('係数を入力してください'); return; }
+  if (fZero(c)){ flash('0 は使えません'); return; }
+  if (mode === 'scale'){
+    const i = picks[0];
+    applyOp(M => opScale(M, i, c),
+      'R' + (i + 1) + ' ← ' + scaleCoef(c) + '·R' + (i + 1));
+  } else if (mode === 'add'){
+    const [i, j] = picks;
+    applyOp(M => opAddRow(M, i, j, c), addLogStr(i, j, c));
+  }
+}
+function scaleCoef(c){
+  const s = fDisp(c);
+  return (c.n < 0 || c.d !== 1) ? '(' + s + ')' : s;
+}
+function addLogStr(i, j, c){
+  const a = F(Math.abs(c.n), c.d);
+  const op = c.n < 0 ? ' ' + MINUS + ' ' : ' + ';
+  const coef = fOne(a) ? '' : fDisp(a) + '·';
+  return 'R' + (i + 1) + ' ← R' + (i + 1) + op + coef + 'R' + (j + 1);
+}
+
+/* ---- 操作の状態遷移 ---- */
+function setMode(m){
+  if (solved || gaveUp) return;
+  mode = (mode === m) ? null : m;
+  picks = [];
+  resetEntry();
+  render();
+}
+function rowClick(r){
+  if (solved || gaveUp) return;
+  if (!mode){ flash('まず操作の種類を選んでください'); return; }
+  if (needScalar()) return; // 係数入力中は行選択済み
+  if (picks.includes(r)){ flash('別の行を選んでください'); return; }
+  picks.push(r);
+  if (mode === 'swap' && picks.length === 2){
+    const [i, j] = picks;
+    applyOp(M => opSwap(M, i, j), 'R' + (i + 1) + ' ↔ R' + (j + 1));
+    return;
+  }
+  render();
+}
+function applyOp(fn, logStr){
+  hist.push(cloneM(P.M));
+  fn(P.M);
+  log.push(logStr);
+  picks = [];
+  resetEntry();
+  if (checkSolved(P)) onSolved();
+  render();
+}
+
+/* ---- 進行 ---- */
+function nextType(){
+  if (bag.length === 0){
+    bag = [1, 2, 3, 4];
+    for (let i = bag.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [bag[i], bag[j]] = [bag[j], bag[i]];
+    }
+  }
+  return bag.pop();
+}
+function newProblem(){
+  P = GENS[nextType()]();
+  P.init = cloneM(P.M);
+  hist = []; log = []; mode = null; picks = [];
+  resetEntry();
+  solved = false; gaveUp = false;
+  t0 = Date.now();
+  if (timerId) clearInterval(timerId);
+  timerId = setInterval(tick, 100);
+  tick();
+  render();
+}
+function tick(){
+  $('timer').textContent = ((Date.now() - t0) / 1000).toFixed(1) + '秒';
+}
+function onSolved(){
+  solved = true;
+  clearInterval(timerId); timerId = null;
+  const ms = Date.now() - t0;
+  P.elapsed = ms;
+  session++; streak++;
+  store.total++;
+  const key = 't' + P.type;
+  P.isBest = !(store.best[key] <= ms);
+  if (P.isBest) store.best[key] = ms;
+  saveStore();
+}
+function doGiveUp(){
+  if (solved || gaveUp) return;
+  gaveUp = true;
+  clearInterval(timerId); timerId = null;
+  streak = 0;
+  mode = null; picks = []; resetEntry();
+  render();
+}
+function doUndo(){
+  if (solved || gaveUp || hist.length === 0) return;
+  P.M = hist.pop();
+  log.pop();
+  picks = []; resetEntry();
+  render();
+}
+function doReset(){
+  if (solved || gaveUp || hist.length === 0) return;
+  P.M = cloneM(P.init);
+  hist = []; log = [];
+  picks = []; resetEntry();
+  render();
+}
+
+let flashTimer = null;
+function flash(msg){
+  const el = $('prompt');
+  el.textContent = msg;
+  el.classList.add('flash');
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => { el.classList.remove('flash'); render(); }, 1200);
+}
+
+/* ---- 描画 ---- */
+function promptText(){
+  if (solved) return 'クリア！「次の問題」へ進みましょう';
+  if (gaveUp) return '解答例を確認して次へ進みましょう';
+  if (!mode) return '操作の種類を選んでください';
+  if (mode === 'swap') return picks.length === 0 ? '入れ替える 1 つ目の行をクリック' : '入れ替える 2 つ目の行をクリック';
+  if (mode === 'scale') return picks.length === 0 ? '定数倍する行をクリック' : '倍率 c をテンキーで入力して「決定」';
+  if (picks.length === 0) return '変更する行 Rᵢ をクリック';
+  if (picks.length === 1) return '加える行 Rⱼ をクリック';
+  return '係数 c をテンキーで入力して「決定」';
+}
+function previewText(){
+  if (solved || gaveUp || !mode) return '';
+  const e = entryStr();
+  if (mode === 'swap'){
+    if (picks.length === 1) return 'R' + (picks[0] + 1) + ' ↔ ?';
+    return '';
+  }
+  if (mode === 'scale' && picks.length === 1){
+    const i = picks[0] + 1;
+    return 'R' + i + ' ← ' + e + '·R' + i;
+  }
+  if (mode === 'add'){
+    if (picks.length === 1) return 'R' + (picks[0] + 1) + ' ← R' + (picks[0] + 1) + ' + c·?';
+    if (picks.length === 2){
+      const i = picks[0] + 1, j = picks[1] + 1;
+      return 'R' + i + ' ← R' + i + ' + (' + e + ')·R' + j;
+    }
+  }
+  return '';
+}
+function resultHTML(){
+  if (solved){
+    const sec = (P.elapsed / 1000).toFixed(1);
+    let h = '<h2>🎉 クリア！</h2><div class="rstats">' +
+      '<span>タイム <b>' + sec + '秒</b>' + (P.isBest ? ' <span class="best">自己ベスト!</span>' : '') + '</span>' +
+      '<span>操作 <b>' + log.length + '回</b></span>';
+    const best = store.best['t' + P.type];
+    if (best && !P.isBest) h += '<span>ベスト <b>' + (best / 1000).toFixed(1) + '秒</b></span>';
+    h += '</div>';
+    if (P.type === 3)
+      h += '<div class="sol">解： ' + P.sol.map((v, k) =>
+        VARS[k] + ' = ' + (v < 0 ? MINUS + Math.abs(v) : v)).join('，　') + '</div>';
+    if (P.type === 4)
+      h += '<div class="sol">右側のブロックが A⁻¹ です。</div>';
+    h += '<button id="nextbtn">次の問題 ▶</button>';
+    return h;
+  }
+  if (gaveUp){
+    let h = '<h2>解答例</h2>';
+    h += '<div style="display:flex;justify-content:center;padding:8px">' +
+      matrixHTML(P.answer, P.augCol, true, false) + '</div>';
+    if (P.type === 3)
+      h += '<div class="sol">解： ' + P.sol.map((v, k) =>
+        VARS[k] + ' = ' + (v < 0 ? MINUS + Math.abs(v) : v)).join('，　') + '</div>';
+    if (P.type === 1)
+      h += '<div class="sol" style="font-style:normal;font-size:.85rem;color:var(--sub)">' +
+        '（解答例は簡約形。階段状になっていれば他の形でも正解です）</div>';
+    h += '<button id="nextbtn">次の問題 ▶</button>';
+    return h;
+  }
+  return '';
+}
+function render(){
+  // 問題文
+  const info = TYPE_INFO[P.type];
+  $('badge').textContent = info.badge;
+  $('instr').innerHTML = info.instr;
+  if (P.type === 3){
+    const b = P.A.map(row => row.reduce((s, v, k) => s + v * P.sol[k], 0));
+    $('eqs').innerHTML = eqsHTML(P.A, b);
+  } else {
+    $('eqs').innerHTML = '';
+  }
+  // 行列
+  const wrap = $('mxwrap');
+  wrap.innerHTML = matrixHTML(P.M, P.augCol, false, true);
+  const active = !solved && !gaveUp;
+  const mx = wrap.querySelector('.mx');
+  if (active && mode && !needScalar()) mx.classList.add('pickable');
+  // 選択ハイライト
+  picks.forEach((r, idx) => {
+    const cls = (mode === 'add' && idx === 1) ? 'selB' : 'selA';
+    wrap.querySelector('.mrow[data-r="' + r + '"]').classList.add(cls);
+  });
+  // 操作パネル
+  ['swap', 'scale', 'add'].forEach(m => {
+    const b = $('op-' + m);
+    b.classList.toggle('active', mode === m);
+    b.disabled = !active;
+  });
+  if (!$('prompt').classList.contains('flash')) $('prompt').textContent = promptText();
+  $('preview').textContent = previewText();
+  // テンキー
+  $('entrydisp').textContent = needScalar() ? entryStr() : '';
+  $('keypad').classList.toggle('off', !needScalar());
+  // コントロール
+  $('undo').disabled = !active || hist.length === 0;
+  $('reset').disabled = !active || hist.length === 0;
+  $('giveup').disabled = !active;
+  // 履歴
+  $('opcount').textContent = log.length ? '（' + log.length + ' 回）' : '';
+  $('histlist').innerHTML = log.length ?
+    log.map(s => '<li>' + s + '</li>').join('') :
+    '<li class="empty">まだ操作していません</li>';
+  const hl = $('histlist'); hl.scrollTop = hl.scrollHeight;
+  // 結果
+  const res = $('result');
+  res.innerHTML = resultHTML();
+  res.className = 'card' + (solved ? ' show ok' : gaveUp ? ' show giveup' : '');
+  const nb = $('nextbtn');
+  if (nb) nb.addEventListener('click', newProblem);
+  // ヘッダ統計
+  $('scount').textContent = session;
+  $('sstreak').textContent = streak;
+  $('stotal').textContent = store.total;
+}
+
+/* ---- イベント ---- */
+$('op-swap').addEventListener('click', () => setMode('swap'));
+$('op-scale').addEventListener('click', () => setMode('scale'));
+$('op-add').addEventListener('click', () => setMode('add'));
+$('keypad').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b) keyPress(b.dataset.k);
+});
+$('mxwrap').addEventListener('click', e => {
+  const el = e.target.closest('.mrow, .rl');
+  if (el && el.dataset.r !== undefined) rowClick(parseInt(el.dataset.r, 10));
+});
+$('undo').addEventListener('click', doUndo);
+$('reset').addEventListener('click', doReset);
+$('giveup').addEventListener('click', doGiveUp);
+
+newProblem();
+})(); }
+</script>
+</body>
+</html>
